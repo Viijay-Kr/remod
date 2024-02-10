@@ -1,0 +1,20 @@
+[package]
+name = "remod_core"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+glob = { workspace = true }
+swc = "0.272.7"
+swc_atoms = "0.6.5"
+swc_common = { version = "0.33.15", features = ["tty-emitter"] }
+swc_ecma_ast = "0.111.1"
+swc_ecma_codegen = "0.147.4"
+swc_ecma_parser = { version = "0.142.1", features = [
+    "typescript",
+    "swc_ecma_visit",
+] }
+swc_ecma_visit = { version = "0.97.1", features = ["path", "serde", "debug"] }
+remod_config = { path = "../remod_config", version = "*" }

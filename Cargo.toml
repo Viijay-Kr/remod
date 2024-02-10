@@ -1,0 +1,7 @@
+[workspace]
+resolver = "2"
+members = ["remod_core", "remod_config", "remod_cli"]
+default-members = ["remod_cli"]
+
+[workspace.dependencies]
+glob = { version = "0.3.1" }
