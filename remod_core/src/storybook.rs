@@ -10,7 +10,10 @@ use swc_common::chain;
 use swc_ecma_ast::Program;
 use swc_ecma_visit::VisitWith;
 
-use crate::{display_name::{FunctionDelarationWalker, VariableDeclarationWalker}, utils::{get_module, should_ignore_entry}};
+use crate::{
+    display_name::{FunctionDelarationWalker, VariableDeclarationWalker},
+    utils::{parse_module, should_ignore_entry},
+};
 
 #[derive(Debug, Default)]
 struct Story {
@@ -116,7 +119,7 @@ impl Storybook {
         if should_ignore_entry(&config.ignore, path) {
             self.ignored += 1;
         } else {
-            let (module, _cm, _comments) = get_module(path, config);
+            let (module, _cm, _comments) = parse_module(path, config);
             let mut variable_decl_visitor = VariableDeclarationWalker { variables: vec![] };
             let mut function_decl_visitor = FunctionDelarationWalker {
                 function_decls: vec![],
@@ -203,6 +206,74 @@ impl Storybook {
                     None => {
                         println!("Not a recognisable directory");
                     }
+                }
+            }
+        }
+    }
+
+    pub fn create_story(&mut self, story_name: Option<String>, path: &PathBuf, config: &Config) {
+        if let Some(component) = story_name {
+            let mut stories: Vec<Story> = vec![];
+            let mut story = Story::new(component.clone());
+            story.print_story();
+            stories.push(story);
+            let mut story_file = StoryFile::new(component.to_owned(), stories);
+            let file_name = path.file_stem().unwrap().to_str().unwrap();
+            story_file.print_import_default();
+            story_file.print_import_component(file_name);
+            story_file.print_meta_decl();
+            story_file.print_story_type();
+            let final_output = story_file.emit_story_file();
+            let may_be_dir = path.parent();
+            match may_be_dir {
+                Some(dir_path) => {
+                    let directory = dir_path.display();
+                    let final_path = format!("{}/{}", directory, file_name);
+                    let pattern_matches = vec![
+                        String::from(final_path.to_owned() + ".stories.tsx"),
+                        String::from(final_path.to_owned() + ".story.tsx"),
+                    ];
+                    if pattern_matches.iter().any(|p| {
+                        let exists_already = File::open(p);
+                        match exists_already {
+                            Ok(_) => true,
+                            Err(_) => false,
+                        }
+                    }) {
+                        println!("Story already exists for {}", path.display());
+                        self.ignored += 0;
+                    } else {
+                        let ext = config
+                            .story_file_ext
+                            .to_owned()
+                            .unwrap_or(String::from(".stories.tsx"));
+                        let file_name = format!("{}{}", final_path, ext);
+                        let new_path = Path::new(file_name.as_str());
+                        let exists_already = File::open(new_path);
+                        match exists_already {
+                            Ok(_) => {
+                                println!("Story alredy exists for {}", path.display());
+                                self.ignored += 1;
+                            }
+                            Err(_) => {
+                                let may_be_file =
+                                    OpenOptions::new().write(true).create(true).open(new_path);
+                                match may_be_file {
+                                    Ok(mut file) => {
+                                        println!("{} => {}", path.display(), new_path.display());
+                                        let _ = file.write(final_output.as_bytes());
+                                        self.created += 1;
+                                    }
+                                    Err(e) => {
+                                        println!("{:#?}", e);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                None => {
+                    println!("Not a recognisable directory");
                 }
             }
         }

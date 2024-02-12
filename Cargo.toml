@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["remod_core", "remod_config", "remod_cli"]
+members = ["remod_core", "remod_config", "remod_cli", "remod_code"]
 default-members = ["remod_cli"]
 
 [workspace.dependencies]

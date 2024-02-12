@@ -1,0 +1,63 @@
+{
+    "name": "remod-code",
+    "description": "Remod VS code extension",
+    "license": "MIT",
+    "version": "0.0.1",
+    "categories": [],
+    "keywords": [
+        "language-server",
+        "tower-lsp"
+    ],
+    "repository": {
+        "url": ""
+    },
+    "engines": {
+        "vscode": "^1.66.0"
+    },
+    "enabledApiProposals": [],
+    "activationEvents": [
+        "onLanguage:typescriptreact"
+    ],
+    "main": "./dist/extension.js",
+    "contributes": {
+        "languages": [
+            {
+                "id": "typescriptreact"
+            }
+        ]
+    },
+    "scripts": {
+        "postinstall": "cd remod_code/client && npm i",
+        "vscode:prepublish": "npm run esbuild-base -- --minify",
+        "esbuild-base": "esbuild ./client/src/extension.ts --bundle --outfile=out/main.js --external:vscode --format=cjs --platform=node",
+        "esbuild": "npm run esbuild-base -- --sourcemap",
+        "esbuild-watch": "npm run esbuild-base -- --sourcemap --watch",
+        "test-compile": "tsc -p ./",
+        "compile": "cross-env NODE_ENV=production tsc -b",
+        "watch": "rm -rf dist && tsc -b -w",
+        "lint": "eslint src --ext ts",
+        "pretest": "npm run compile && npm run lint",
+        "test": "node ./out/test/runTest.js",
+        "build": "webpack --config webpack.config.js",
+        "package": "vsce package --no-dependencies",
+        "publish": "vsce publish --no-dependencies"
+    },
+    "devDependencies": {
+        "@types/glob": "^7.1.3",
+        "@types/mocha": "^8.0.0",
+        "@typescript-eslint/eslint-plugin": "^3.8.0",
+        "@typescript-eslint/parser": "^3.8.0",
+        "cross-env": "^7.0.2",
+        "electron-rebuild": "^1.11.0",
+        "esbuild": "^0.15.10",
+        "eslint": "^7.6.0",
+        "glob": "^7.1.7",
+        "mocha": "^8.0.1",
+        "typescript": "^4.4.3",
+        "vscode-uri": "^3.0.2",
+        "webpack": "^5.82.1"
+    },
+    "dependencies": {
+        "vscode-languageclient": "^8.0.2"
+    }
+}

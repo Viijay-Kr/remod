@@ -8,7 +8,7 @@ use swc_common::{
     errors::{ColorConfig, Handler},
     SourceMap,
 };
-use swc_ecma_ast::Module;
+use swc_ecma_ast::{Expr, Module, Program};
 use swc_ecma_parser::{lexer::Lexer, Parser, StringInput, Syntax};
 use swc_ecma_parser::{EsConfig, TsConfig};
 
@@ -25,7 +25,7 @@ pub fn should_ignore_entry(ignore: &Vec<String>, path: &PathBuf) -> bool {
     })
 }
 
-pub fn get_module(
+pub fn parse_module(
     path: &PathBuf,
     config: &Config,
 ) -> (Module, Lrc<SourceMap>, SingleThreadedComments) {
@@ -62,4 +62,56 @@ pub fn get_module(
 
     let mut _module = parser.parse_module().expect("failed to parser module");
     (_module, cm, comments)
+}
+
+pub fn get_program(
+    path: &PathBuf,
+    config: &Config,
+) -> (Program, Lrc<SourceMap>, SingleThreadedComments) {
+    let cm: Lrc<SourceMap> = Default::default();
+    let handler = Handler::with_tty_emitter(ColorConfig::Auto, true, false, Some(cm.clone()));
+    let fm = cm.load_file(path.as_path()).expect("failed to load ");
+    let ts_config = TsConfig {
+        tsx: true,
+        disallow_ambiguous_jsx_like: false,
+        ..Default::default()
+    };
+    let syntax = if config.typescript.is_some() {
+        Syntax::Typescript(ts_config)
+    } else {
+        Syntax::Es(EsConfig {
+            jsx: true,
+            ..Default::default()
+        })
+    };
+    let comments: SingleThreadedComments = SingleThreadedComments::default();
+    let lexer = Lexer::new(
+        syntax,
+        // EsVersion defaults to es5
+        Default::default(),
+        StringInput::from(&*fm),
+        Some(&comments),
+    );
+
+    let mut parser = Parser::new_from(lexer);
+
+    for e in parser.take_errors() {
+        e.into_diagnostic(&handler).emit();
+    }
+
+    let mut _module = parser.parse_module().expect("failed to parser module");
+    let program = Program::Module(_module);
+    (program, cm, comments)
+}
+
+pub fn is_jsx_like(expr: &Box<Expr>) -> bool {
+    match *expr.to_owned() {
+        Expr::JSXMember(..)
+        | Expr::JSXNamespacedName(..)
+        | Expr::JSXEmpty(..)
+        | Expr::JSXElement(..)
+        | Expr::JSXFragment(..) => true,
+        Expr::Paren(exp) => is_jsx_like(&exp.expr),
+        _ => false,
+    }
 }

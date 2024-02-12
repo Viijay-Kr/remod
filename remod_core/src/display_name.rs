@@ -13,7 +13,7 @@ use swc_ecma_ast::{
 };
 use swc_ecma_visit::{Visit, VisitMut, VisitMutWith, VisitWith};
 
-use crate::utils::{get_module, should_ignore_entry};
+use crate::utils::{parse_module, should_ignore_entry};
 
 pub struct VariableDeclarationWalker {
     pub variables: Vec<BindingIdent>,
@@ -291,7 +291,7 @@ impl DisplayName {
                     }
 
                     println!("{}", path.display());
-                    let (mut _module, _cm, _comments) = get_module(&path, &config);
+                    let (mut _module, _cm, _comments) = parse_module(&path, &config);
                     let mut variable_decl_visitor = VariableDeclarationWalker { variables: vec![] };
                     let mut function_decl_visitor = FunctionDelarationWalker {
                         function_decls: vec![],
@@ -381,7 +381,7 @@ impl DisplayName {
                         continue;
                     }
                     println!("{}", path.display());
-                    let (_module, _cm, _comments) = get_module(&path, &config);
+                    let (_module, _cm, _comments) = parse_module(&path, &config);
                     let program = Program::Module(_module);
 
                     let mut expr_vistor = ExpressionStatementVisitor {
@@ -462,7 +462,7 @@ impl DisplayName {
                         continue;
                     } else {
                         println!("{}", path.display());
-                        let (module, _cm, _comments) = get_module(&path, &config);
+                        let (module, _cm, _comments) = parse_module(&path, &config);
                         let program = Program::Module(module);
                         let mut rename_visitor = RenameDisplayNameVisitor {
                             assign_exprs: vec![],
@@ -536,6 +536,7 @@ impl DisplayName {
             }
         }
     }
+
     pub fn display_stats(self) {
         println!("Total {} files", self.total);
         println!("Modified {} files", self.modified);
