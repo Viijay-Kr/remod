@@ -164,17 +164,17 @@ impl LanguageServer for Backend {
                 }
             }
         }
-        self.client.apply_edit(WorkspaceEdit {
-            changes: (),
-            document_changes: Some(DocumentChanges::Operations(vec![
-                DocumentChangeOperation::Op(ResourceOp::Create(CreateFile {
-                    uri: todo!(),
-                    options: todo!(),
-                    annotation_id: todo!(),
-                })),
-            ])),
-            change_annotations: (),
-        });
+        // self.client.apply_edit(WorkspaceEdit {
+        //     changes: (),
+        //     document_changes: Some(DocumentChanges::Operations(vec![
+        //         DocumentChangeOperation::Op(ResourceOp::Create(CreateFile {
+        //             uri: todo!(),
+        //             options: todo!(),
+        //             annotation_id: todo!(),
+        //         })),
+        //     ])),
+        //     change_annotations: (),
+        // })
         Ok(Some(Value::Null))
     }
 }
