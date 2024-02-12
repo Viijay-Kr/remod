@@ -20,7 +20,7 @@
     ],
     "references": [
         {
-            "path": "./remod_code/client"
+            "path": "./packages/remod_code/client"
         },
     ]
 }
