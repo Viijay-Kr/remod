@@ -12,4 +12,4 @@ export function FunctionDeclaration(props: Props) {
     </div>
   );
 }
-FunctionDeclaration.displayName = "React_MOD_FunctionDeclaration";
+FunctionDeclaration.displayName = "REMOD_FunctionDeclaration"

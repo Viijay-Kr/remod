@@ -427,5 +427,5 @@ export const Carousel = factory<CarouselFactory>((_props, ref) => {
 });
 
 Carousel.classes = classes;
-Carousel.displayName = "React_MOD_Carousel";
 Carousel.Slide = CarouselSlide;
+Carousel.displayName = "REMOD_Carousel"

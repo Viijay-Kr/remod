@@ -6,5 +6,4 @@ interface Props {
 export function FunctionDeclarationFragment(props: Props) {
   return <></>;
 }
-FunctionDeclarationFragment.displayName =
-  "React_MOD_FunctionDeclarationFragment";
+FunctionDeclarationFragment.displayName = "REMOD_FunctionDeclarationFragment"

@@ -17,4 +17,4 @@ export const ArrowExpressionComponent = (props: Props) => {
     </div>
   );
 };
-ArrowExpressionComponent.displayName = "React_MOD_ArrowExpressionComponent";
+ArrowExpressionComponent.displayName = "REMOD_ArrowExpressionComponent"

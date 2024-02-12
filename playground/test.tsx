@@ -44,18 +44,11 @@ export const ArrowExpressionComponentForwardRefWithFunctionExpression =
   forwardRef(function (props: Props, ref: unknown) {
     return <div></div>;
   });
-ArrowExpressionComponent.displayName = "React_MOD_ArrowExpressionComponent";
-ArrowExpressionComponentReturnVariant.displayName =
-  "React_MOD_ArrowExpressionComponentReturnVariant";
-ArrowExpressionComponentNameSpaceVariant.displayName =
-  "React_MOD_ArrowExpressionComponentNameSpaceVariant";
-ArrowExpressionComponentFragmentVersion.displayName =
-  "React_MOD_ArrowExpressionComponentFragmentVersion";
-ArrowExpressionComponentForwardRefWithMemberExpr.displayName =
-  "React_MOD_ArrowExpressionComponentForwardRefWithMemberExpr";
-ArrowExpressionComponentForwardRefWithoutMemberExpr.displayName =
-  "React_MOD_ArrowExpressionComponentForwardRefWithoutMemberExpr";
-ArrowExpressionComponentForwardRefWithFunctionExpression.displayName =
-  "React_MOD_ArrowExpressionComponentForwardRefWithFunctionExpression";
-FunctionDeclarationComponent.displayName =
-  "React_MOD_FunctionDeclarationComponent";
+ArrowExpressionComponent.displayName = "REMOD_ArrowExpressionComponent"
+ArrowExpressionComponentReturnVariant.displayName = "REMOD_ArrowExpressionComponentReturnVariant"
+ArrowExpressionComponentNameSpaceVariant.displayName = "REMOD_ArrowExpressionComponentNameSpaceVariant"
+ArrowExpressionComponentFragmentVersion.displayName = "REMOD_ArrowExpressionComponentFragmentVersion"
+ArrowExpressionComponentForwardRefWithMemberExpr.displayName = "REMOD_ArrowExpressionComponentForwardRefWithMemberExpr"
+ArrowExpressionComponentForwardRefWithoutMemberExpr.displayName = "REMOD_ArrowExpressionComponentForwardRefWithoutMemberExpr"
+ArrowExpressionComponentForwardRefWithFunctionExpression.displayName = "REMOD_ArrowExpressionComponentForwardRefWithFunctionExpression"
+FunctionDeclarationComponent.displayName = "REMOD_FunctionDeclarationComponent"

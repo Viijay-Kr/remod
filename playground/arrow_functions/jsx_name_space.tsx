@@ -6,5 +6,4 @@ interface Props {
 export const ArrowExpressionComponentNameSpaceVariant = (props: Props) => (
   <FunctionDeclarationComponent />
 );
-ArrowExpressionComponentNameSpaceVariant.displayName =
-  "React_MOD_ArrowExpressionComponentNameSpaceVariant";
+ArrowExpressionComponentNameSpaceVariant.displayName = "REMOD_ArrowExpressionComponentNameSpaceVariant"

@@ -18,12 +18,9 @@ export const ArrowExpressionComponentForwardRefWithFunctionExpression =
     return <div></div>;
   });
 
-ArrowExpressionComponentForwardRefWithMemberExpr.displayName =
-  "React_MOD_ArrowExpressionComponentForwardRefWithMemberExpr";
-ArrowExpressionComponentForwardRefWithoutMemberExpr.displayName =
-  "React_MOD_ArrowExpressionComponentForwardRefWithoutMemberExpr";
-ArrowExpressionComponentForwardRefWithFunctionExpression.displayName =
-  "React_MOD_ArrowExpressionComponentForwardRefWithFunctionExpression";
 
 ArrowExpressionComponentForwardRefWithFunctionExpression.classes =
   "ClasseDummy";
+ArrowExpressionComponentForwardRefWithMemberExpr.displayName = "REMOD_ArrowExpressionComponentForwardRefWithMemberExpr"
+ArrowExpressionComponentForwardRefWithoutMemberExpr.displayName = "REMOD_ArrowExpressionComponentForwardRefWithoutMemberExpr"
+ArrowExpressionComponentForwardRefWithFunctionExpression.displayName = "REMOD_ArrowExpressionComponentForwardRefWithFunctionExpression"

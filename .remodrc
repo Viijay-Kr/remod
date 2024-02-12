@@ -1,8 +1,8 @@
 {
-    "root_dir": "/Volumes/VijaysHDD/private/mantine",
-    "glob": "packages/@mantine/**/*.tsx",
+    "root_dir": ".",
+    "glob": "playground/**/*.tsx",
     "typescript": true,
-    "display_name_prefix": "Mantine_UI",
+    "display_name_prefix": "REMOD",
     "story_file_ext": ".stories.tsx",
     "ignore": [
         "*.stories.tsx",

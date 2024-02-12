@@ -6,5 +6,4 @@ interface Props {
 export const ArrowExpressionComponentFragmentVersion = (props: Props) => {
   return <></>;
 };
-ArrowExpressionComponentFragmentVersion.displayName =
-  "UIKit_ArrowExpressionComponentFragmentVersion";
+ArrowExpressionComponentFragmentVersion.displayName = "REMOD_ArrowExpressionComponentFragmentVersion"

@@ -6,4 +6,4 @@ interface Props {
 export function FunctionDeclarationNameSpace(props: Props) {
     return <FunctionDeclarationComponent/>;
 }
-FunctionDeclarationNameSpace.displayName = "React_MOD_FunctionDeclarationNameSpace"
+FunctionDeclarationNameSpace.displayName = "REMOD_FunctionDeclarationNameSpace"
