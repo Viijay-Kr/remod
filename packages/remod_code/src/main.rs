@@ -3,7 +3,6 @@ use remod_core::arrow_components::ArrowExpressionComponents;
 use remod_core::storybook::Storybook;
 use serde_json::{Map, Value};
 use std::path::{Path, PathBuf};
-use std::str::FromStr;
 use tokio::try_join;
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::*;
@@ -222,11 +221,8 @@ impl LanguageServer for Backend {
                                                                 "Story successfully populated",
                                                             )
                                                             .await;
-                                                        let (start_loc, end_loc) = stf
-                                                            .find_story_ident_loc(
-                                                                &PathBuf::from_str(&file).unwrap(),
-                                                                &self.config,
-                                                            );
+                                                        let (start_loc, end_loc) =
+                                                            stf.find_story_ident_loc(&self.config);
                                                         let selection_range = Some(Range {
                                                             start: Position {
                                                                 line: (start_loc.line as u32) - 1,

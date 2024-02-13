@@ -6,7 +6,7 @@ use std::{
 
 use crate::{
     display_name::{FunctionDelarationWalker, VariableDeclarationWalker},
-    utils::{get_program, parse_module, should_ignore_entry},
+    utils::{parse_module, parse_raw_string_as_module, should_ignore_entry},
 };
 use glob::Paths;
 use remod_config::Config;
@@ -137,8 +137,8 @@ impl StoryFile {
         )
     }
 
-    pub fn find_story_ident_loc(&self, source_file: &PathBuf, config: &Config) -> (Loc, Loc) {
-        let (program, cm, _comments) = get_program(source_file, config);
+    pub fn find_story_ident_loc(&self, config: &Config) -> (Loc, Loc) {
+        let (program, cm) = parse_raw_string_as_module(&self.emit_story_file(), config);
         let mut story_expr = StoryNameExpr {
             _filter: format!("{}_Primary", self.component.to_owned()),
             ..Default::default()

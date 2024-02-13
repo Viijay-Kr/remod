@@ -4,14 +4,14 @@ use glob::Pattern;
 use remod_config::Config;
 use swc_common::comments::SingleThreadedComments;
 use swc_common::sync::Lrc;
-use swc_common::BytePos;
+use swc_common::FileName;
 use swc_common::{
     errors::{ColorConfig, Handler},
     SourceMap,
 };
 use swc_ecma_ast::{Expr, Module, Program};
 use swc_ecma_parser::{lexer::Lexer, Parser, StringInput, Syntax};
-use swc_ecma_parser::{EsConfig, TsConfig};
+use swc_ecma_parser::{Capturing, EsConfig, TsConfig};
 
 pub fn should_ignore_entry(ignore: &Vec<String>, path: &PathBuf) -> bool {
     ignore.iter().any(|it| {
@@ -112,9 +112,10 @@ pub fn get_program(
     (program, cm, comments)
 }
 
-pub fn parse_raw_string_as_module(source: &str, config: &Config) -> Module {
+pub fn parse_raw_string_as_module(source: &str, config: &Config) -> (Program, Lrc<SourceMap>) {
     let cm: Lrc<SourceMap> = Default::default();
     let handler = Handler::with_tty_emitter(ColorConfig::Auto, true, false, Some(cm.clone()));
+    let fm = cm.new_source_file(FileName::Custom("sample.tsx".into()), source.into());
     let ts_config = TsConfig {
         tsx: true,
         disallow_ambiguous_jsx_like: false,
@@ -133,18 +134,24 @@ pub fn parse_raw_string_as_module(source: &str, config: &Config) -> Module {
         syntax,
         // EsVersion defaults to es5
         Default::default(),
-        StringInput::new(source, BytePos(0), BytePos(0)),
+        StringInput::from(&*fm),
         Some(&comments),
     );
 
-    let mut parser = Parser::new_from(lexer);
+    let capturing = Capturing::new(lexer);
+
+    let mut parser = Parser::new_from(capturing);
 
     for e in parser.take_errors() {
         e.into_diagnostic(&handler).emit();
     }
 
-    let module = parser.parse_module().expect("failed to parser module");
-    module
+    let module = parser
+        .parse_typescript_module()
+        .map_err(|e| e.into_diagnostic(&handler).emit())
+        .expect("failed to parser module");
+    let program = Program::Module(module);
+    (program, cm)
 }
 
 pub fn is_jsx_like(expr: &Box<Expr>) -> bool {
