@@ -1,6 +1,6 @@
 {
     "root_dir": ".",
-    "glob": "playground/**/*.tsx",
+    "glob": "playground/arrow_functions/jsx_name_space.tsx",
     "typescript": true,
     "display_name_prefix": "REMOD",
     "story_file_ext": ".stories.tsx",

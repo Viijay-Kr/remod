@@ -40,12 +40,24 @@ import {
   DocumentSelector,
   FeatureState,
   InitializeParams,
+  ProtocolNotificationType0,
   ResourceOperationKind,
   ServerCapabilities,
   StaticFeature,
 } from "vscode-languageclient";
 
+let client: LanguageClient;
+// type a = Parameters<>;
+
+const documentSelector = [{ scheme: "file", language: "typescriptreact" }];
+
 export class WorkaroundFeature implements StaticFeature {
+  getState(): FeatureState {
+    return {} as FeatureState;
+  }
+  dispose(): void {
+    client.dispose();
+  }
   fillInitializeParams?: (params: InitializeParams) => void;
   preInitialize?: (
     capabilities: ServerCapabilities<any>,
@@ -55,17 +67,13 @@ export class WorkaroundFeature implements StaticFeature {
     capabilities: ServerCapabilities<any>,
     documentSelector: DocumentSelector
   ): void {
-    throw new Error("Method not implemented.");
+    client.sendNotification(new ProtocolNotificationType0("initialize"));
   }
-  getState(): FeatureState {
-    throw new Error("Method not implemented.");
-  }
-  dispose(): void {
-    throw new Error("Method not implemented.");
-  }
+
   fillClientCapabilities(capabilities: ClientCapabilities): void {
     capabilities.workspace.workspaceEdit = { documentChanges: true };
     capabilities.workspace.applyEdit = true;
+    capabilities.workspace.workspaceEdit.documentChanges = true;
     capabilities.workspace.workspaceEdit.resourceOperations = [
       ResourceOperationKind.Create,
     ];
@@ -73,9 +81,6 @@ export class WorkaroundFeature implements StaticFeature {
     capabilities.workspace.fileOperations.willCreate = true;
   }
 }
-let client: LanguageClient;
-// type a = Parameters<>;
-const documentSelector = [{ scheme: "file", language: "typescriptreact" }];
 export async function activate(context: ExtensionContext) {
   let disposable = commands.registerCommand(
     "remod.create-story",
@@ -100,6 +105,7 @@ export async function activate(context: ExtensionContext) {
         ...process.env,
         // eslint-disable-next-line @typescript-eslint/naming-convention
         RUST_LOG: "debug",
+        RUST_BACKTRACE: "full",
       },
     },
   };
@@ -129,7 +135,6 @@ export async function activate(context: ExtensionContext) {
   );
 
   registerFeatures(context);
-  console.log("langauges", await languages.getLanguages());
   client.registerProposedFeatures();
   client.registerFeature(new WorkaroundFeature());
   client.start();
@@ -176,7 +181,6 @@ export function registerFeatures(ctx: ExtensionContext) {
     maybeUpdater,
     ctx.subscriptions
   );
-
   maybeUpdater.onConfigChange().catch(console.error);
 }
 

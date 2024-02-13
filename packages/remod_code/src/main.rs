@@ -1,9 +1,10 @@
-use std::path::PathBuf;
-
 use remod_config::Config;
 use remod_core::arrow_components::ArrowExpressionComponents;
 use remod_core::storybook::Storybook;
 use serde_json::{Map, Value};
+use std::path::{Path, PathBuf};
+use std::str::FromStr;
+use tokio::try_join;
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LanguageServer, LspService, Server};
@@ -29,6 +30,12 @@ impl LanguageServer for Backend {
                         work_done_progress: Some(false),
                     },
                 }),
+                text_document_sync: Some(TextDocumentSyncCapability::Options(
+                    TextDocumentSyncOptions {
+                        change: Some(TextDocumentSyncKind::FULL),
+                        ..Default::default()
+                    },
+                )),
                 ..Default::default()
             },
             ..Default::default()
@@ -98,83 +105,169 @@ impl LanguageServer for Backend {
             self.client
                 .log_message(MessageType::LOG, arg.clone().unwrap())
                 .await;
+            let mut symbol: Option<String> = None;
+            let mut path: Option<PathBuf> = None;
             match arg {
                 Some(value) => match value {
                     Value::Object(v) => {
                         let may_be_file = v.get("document_uri");
                         let may_be_symbol = v.get("symbol");
-                        let mut symbol: Option<String> = None;
-                        let mut path = PathBuf::default();
                         match may_be_symbol {
                             Some(v) => match v {
                                 Value::String(s) => {
                                     symbol = Some(s.to_string());
                                 }
-                                _ => {
-                                    self.client
-                                        .log_message(
-                                            MessageType::ERROR,
-                                            "Something wrong with the command arguments",
-                                        )
-                                        .await
-                                }
+                                _ => {}
                             },
                             None => {}
                         }
                         match may_be_file {
                             Some(f) => match f {
-                                Value::String(file) => path = PathBuf::from(file),
-                                _ => {
-                                    self.client
-                                        .log_message(
-                                            MessageType::ERROR,
-                                            "Something wrong with the command arguments",
-                                        )
-                                        .await
-                                }
+                                Value::String(file) => path = Some(PathBuf::from(file)),
+                                _ => {}
                             },
-                            None => {
+                            None => {}
+                        }
+                    }
+                    _ => {}
+                },
+                None => {}
+            };
+            if symbol == None && path == None {
+                self.client
+                    .log_message(MessageType::ERROR, "Error parsing command arguments")
+                    .await;
+            } else {
+                let mut story_book = Storybook::default();
+
+                let story_file =
+                    story_book.pre_process_story_module(symbol, &path.unwrap(), &self.config);
+                match story_file {
+                    Ok((stf, file)) => {
+                        let path = Path::new(&file);
+                        self.client
+                            .log_message(MessageType::LOG, format!("Trying to parse {}", &file))
+                            .await;
+                        let may_be_uri = Url::from_file_path(path);
+                        match may_be_uri {
+                            Ok(uri) => {
+                                let create_file = CreateFile {
+                                    uri: uri.clone(),
+                                    options: Some(CreateFileOptions {
+                                        ignore_if_exists: Some(false),
+                                        overwrite: Some(false),
+                                    }),
+                                    annotation_id: Some("STORY:CREATE".to_string()),
+                                };
+                                let text_edits: Vec<OneOf<TextEdit, AnnotatedTextEdit>> =
+                                    vec![OneOf::Left(TextEdit {
+                                        range: Range {
+                                            start: Position {
+                                                line: 0,
+                                                character: 0,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                character: 0,
+                                            },
+                                        },
+                                        new_text: stf.emit_story_file(),
+                                    })];
+                                let text_document_edit = TextDocumentEdit {
+                                    text_document: OptionalVersionedTextDocumentIdentifier {
+                                        uri: uri.clone(),
+                                        version: None,
+                                    },
+                                    edits: text_edits,
+                                };
+                                let create = self.client.apply_edit(WorkspaceEdit {
+                                    changes: None,
+                                    document_changes: Some(DocumentChanges::Operations(vec![
+                                        DocumentChangeOperation::Op(ResourceOp::Create(
+                                            create_file,
+                                        )),
+                                    ])),
+                                    change_annotations: None,
+                                });
+
+                                let result = try_join!(create);
+                                match result {
+                                    Ok(ref c) => {
+                                        if c.0.applied {
+                                            self.client
+                                                .log_message(
+                                                    MessageType::INFO,
+                                                    "Create Story successfull",
+                                                )
+                                                .await;
+                                            let edit = self.client.apply_edit(WorkspaceEdit {
+                                                changes: None,
+                                                document_changes: Some(
+                                                    DocumentChanges::Operations(vec![
+                                                        DocumentChangeOperation::Edit(
+                                                            text_document_edit,
+                                                        ),
+                                                    ]),
+                                                ),
+                                                change_annotations: None,
+                                            });
+                                            let edit_result = try_join!(edit);
+                                            match edit_result {
+                                                Ok(ref ed) => {
+                                                    dbg!(ed);
+                                                    if ed.0.applied {
+                                                        self.client
+                                                            .log_message(
+                                                                MessageType::INFO,
+                                                                "Story successfully populated",
+                                                            )
+                                                            .await;
+                                                        let (start_loc, end_loc) = stf
+                                                            .find_story_ident_loc(
+                                                                &PathBuf::from_str(&file).unwrap(),
+                                                                &self.config,
+                                                            );
+                                                        let selection_range = Some(Range {
+                                                            start: Position {
+                                                                line: (start_loc.line as u32) - 1,
+                                                                character: start_loc.col_display
+                                                                    as u32,
+                                                            },
+                                                            end: Position {
+                                                                line: (end_loc.line as u32) - 1,
+                                                                character: end_loc.col_display
+                                                                    as u32,
+                                                            },
+                                                        });
+                                                        let _ = self
+                                                            .client
+                                                            .show_document(ShowDocumentParams {
+                                                                uri,
+                                                                external: Some(false),
+                                                                take_focus: Some(true),
+                                                                selection: selection_range,
+                                                            })
+                                                            .await;
+                                                    }
+                                                }
+                                                Err(_) => todo!(),
+                                            }
+                                        }
+                                    }
+                                    Err(e) => self.client.log_message(MessageType::ERROR, e).await,
+                                }
+                            }
+                            Err(..) => {
                                 self.client
-                                    .log_message(
-                                        MessageType::ERROR,
-                                        "Something wrong with the command arguments",
-                                    )
+                                    .log_message(MessageType::ERROR, "Error parsing URI")
                                     .await
                             }
                         }
-                        let mut story_book = Storybook::default();
-                        story_book.create_story(symbol, &path, &self.config)
                     }
-                    _ => {
-                        self.client
-                            .log_message(
-                                MessageType::ERROR,
-                                "Something wrong with the command arguments",
-                            )
-                            .await
-                    }
-                },
-                None => {
-                    self.client
-                        .log_message(
-                            MessageType::ERROR,
-                            "Something wrong with the command arguments",
-                        )
-                        .await
+                    Err(e) => self.client.log_message(MessageType::ERROR, e).await,
                 }
             }
         }
-        // self.client.apply_edit(WorkspaceEdit {
-        //     changes: (),
-        //     document_changes: Some(DocumentChanges::Operations(vec![
-        //         DocumentChangeOperation::Op(ResourceOp::Create(CreateFile {
-        //             uri: todo!(),
-        //             options: todo!(),
-        //             annotation_id: todo!(),
-        //         })),
-        //     ])),
-        //     change_annotations: (),
-        // })
         Ok(Some(Value::Null))
     }
 }

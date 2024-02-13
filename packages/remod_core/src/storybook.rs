@@ -4,16 +4,39 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use glob::Paths;
-use remod_config::Config;
-use swc_common::chain;
-use swc_ecma_ast::Program;
-use swc_ecma_visit::VisitWith;
-
 use crate::{
     display_name::{FunctionDelarationWalker, VariableDeclarationWalker},
-    utils::{parse_module, should_ignore_entry},
+    utils::{get_program, parse_module, should_ignore_entry},
 };
+use glob::Paths;
+use remod_config::Config;
+use swc_common::Spanned;
+use swc_common::{chain, util::take::Take, Loc};
+use swc_ecma_ast::{BindingIdent, Ident, Program};
+use swc_ecma_visit::{Visit, VisitWith};
+
+pub struct StoryNameExpr {
+    pub expr: Ident,
+    /// Stories to filter from
+    _filter: String,
+}
+
+impl Default for StoryNameExpr {
+    fn default() -> Self {
+        Self {
+            expr: Ident::dummy(),
+            _filter: Default::default(),
+        }
+    }
+}
+
+impl Visit for StoryNameExpr {
+    fn visit_binding_ident(&mut self, n: &BindingIdent) {
+        if &*n.id.sym == &self._filter {
+            self.expr = n.id.clone();
+        }
+    }
+}
 
 #[derive(Debug, Default)]
 struct Story {
@@ -35,17 +58,16 @@ impl Story {
     }
     fn print_story(&mut self) {
         self.value = format!(
-            "export const {}: {} = {{\n
+            "export const {}_{}: {} = {{\n
                 render: (args)=><{} {{...args}} />
             \n}}
             ",
-            "Primary", self.type_annotation, self.name
+            self.name, "Primary", self.type_annotation, self.name
         );
     }
 }
 
-#[derive(Debug, Default)]
-struct StoryFile {
+pub struct StoryFile {
     /// component in Process
     component: String,
     /// The default import statement
@@ -60,6 +82,18 @@ struct StoryFile {
     stories: Vec<Story>,
 }
 
+impl Default for StoryFile {
+    fn default() -> Self {
+        Self {
+            component: Default::default(),
+            import_default: Default::default(),
+            import_component: Default::default(),
+            meta_decl: Default::default(),
+            story_type: Default::default(),
+            stories: Default::default(),
+        }
+    }
+}
 impl StoryFile {
     fn new(comp: String, stories: Vec<Story>) -> Self {
         StoryFile {
@@ -88,7 +122,7 @@ impl StoryFile {
         self.story_type = format!("type Story = StoryObj<typeof {}>;", self.component);
     }
 
-    fn emit_story_file(&self) -> String {
+    pub fn emit_story_file(&self) -> String {
         format!(
             "{}\n{}\n{}\n{}\n{}",
             self.import_default,
@@ -101,6 +135,18 @@ impl StoryFile {
                 .collect::<Vec<String>>()
                 .join("\n")
         )
+    }
+
+    pub fn find_story_ident_loc(&self, source_file: &PathBuf, config: &Config) -> (Loc, Loc) {
+        let (program, cm, _comments) = get_program(source_file, config);
+        let mut story_expr = StoryNameExpr {
+            _filter: format!("{}_Primary", self.component.to_owned()),
+            ..Default::default()
+        };
+        program.visit_with(&mut story_expr);
+        let start_loc = cm.lookup_char_pos(story_expr.expr.span_lo());
+        let end_loc = cm.lookup_char_pos(story_expr.expr.span_hi());
+        (start_loc, end_loc)
     }
 }
 
@@ -211,7 +257,12 @@ impl Storybook {
         }
     }
 
-    pub fn create_story(&mut self, story_name: Option<String>, path: &PathBuf, config: &Config) {
+    pub fn pre_process_story_module(
+        &mut self,
+        story_name: Option<String>,
+        path: &PathBuf,
+        config: &Config,
+    ) -> Result<(StoryFile, String), String> {
         if let Some(component) = story_name {
             let mut stories: Vec<Story> = vec![];
             let mut story = Story::new(component.clone());
@@ -223,9 +274,8 @@ impl Storybook {
             story_file.print_import_component(file_name);
             story_file.print_meta_decl();
             story_file.print_story_type();
-            let final_output = story_file.emit_story_file();
             let may_be_dir = path.parent();
-            match may_be_dir {
+            let result = match may_be_dir {
                 Some(dir_path) => {
                     let directory = dir_path.display();
                     let final_path = format!("{}/{}", directory, file_name);
@@ -240,43 +290,26 @@ impl Storybook {
                             Err(_) => false,
                         }
                     }) {
-                        println!("Story already exists for {}", path.display());
-                        self.ignored += 0;
+                        Err(format!("Story already exists for {}", path.display()))
                     } else {
                         let ext = config
                             .story_file_ext
                             .to_owned()
                             .unwrap_or(String::from(".stories.tsx"));
                         let file_name = format!("{}{}", final_path, ext);
-                        let new_path = Path::new(file_name.as_str());
+                        let new_path = Path::new(&file_name);
                         let exists_already = File::open(new_path);
                         match exists_already {
-                            Ok(_) => {
-                                println!("Story alredy exists for {}", path.display());
-                                self.ignored += 1;
-                            }
-                            Err(_) => {
-                                let may_be_file =
-                                    OpenOptions::new().write(true).create(true).open(new_path);
-                                match may_be_file {
-                                    Ok(mut file) => {
-                                        println!("{} => {}", path.display(), new_path.display());
-                                        let _ = file.write(final_output.as_bytes());
-                                        self.created += 1;
-                                    }
-                                    Err(e) => {
-                                        println!("{:#?}", e);
-                                    }
-                                }
-                            }
+                            Ok(_) => Err(format!("Story already exists for {}", path.display())),
+                            Err(_) => Ok((story_file, file_name)),
                         }
                     }
                 }
-                None => {
-                    println!("Not a recognisable directory");
-                }
-            }
+                None => Err("Not a recognisable directory".to_string()),
+            };
+            return result;
         }
+        Err("Could not complete request".to_string())
     }
 
     pub fn emit_story_files(&mut self, files: Paths, config: &Config) {
